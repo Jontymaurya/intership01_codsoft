@@ -1,0 +1,36 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+# Example item data with descriptions
+items = pd.DataFrame({
+    'item_id': [1, 2, 3, 4, 5],
+    'title': ['The Matrix', 'The Godfather', 'Titanic', 'Inception', 'The Dark Knight'],
+    'description': ['A computer hacker learns from mysterious rebels...',
+                    'The aging patriarch of an organized crime dynasty...',
+                    'A seventeen-year-old aristocrat falls in love...',
+                    'A thief who steals corporate secrets through...',
+                    'When the menace known as the Joker emerges...']
+})
+
+# User profile: liked item IDs
+user_profile = [1, 3]
+
+# Create TF-IDF matrix for item descriptions
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(items['description'])
+
+# Calculate cosine similarity between items
+cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+# Get indices of liked items
+liked_indices = [items[items['item_id'] == item_id].index[0] for item_id in user_profile]
+
+# Sum up the cosine similarity scores for liked items
+similarity_scores = cosine_similarities[liked_indices].sum(axis=0)
+
+# Get top-n recommendations excluding liked items
+top_n = 3
+recommended_indices = [i for i in similarity_scores.argsort()[::-1] if i not in liked_indices][:top_n]
+recommended_items = items.iloc[recommended_indices]
+
+print(f"Recommended items for the user: {recommended_items['title'].tolist()}")

@@ -1,0 +1,39 @@
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Example user-item interaction matrix
+data = {
+    'user': [1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5],
+    'item': [1, 2, 3, 1, 2, 2, 3, 1, 3, 4, 2],
+    'rating': [5, 4, 3, 4, 5, 2, 5, 4, 4, 5, 3]
+}
+df = pd.DataFrame(data)
+
+# Create a user-item matrix
+user_item_matrix = df.pivot(index='user', columns='item', values='rating').fillna(0)
+
+# Compute cosine similarity between users
+user_similarity = cosine_similarity(user_item_matrix)
+user_similarity_df = pd.DataFrame(user_similarity, index=user_item_matrix.index, columns=user_item_matrix.index)
+
+# Recommend items to a specific user based on similar users
+def recommend_items(user_id, user_item_matrix, user_similarity_df, top_n=3):
+    # Get the ratings of the target user
+    user_ratings = user_item_matrix.loc[user_id]
+    # Find similar users
+    similar_users = user_similarity_df[user_id].sort_values(ascending=False).index[1:]
+    # Weighted sum of ratings
+    recommendations = np.zeros(user_item_matrix.shape[1])
+    for similar_user in similar_users:
+        weight = user_similarity_df[user_id][similar_user]
+        recommendations += weight * user_item_matrix.loc[similar_user]
+    # Remove already rated items
+    recommendations = recommendations - user_ratings * user_similarity_df[user_id].sum()
+    # Get top-n recommendations
+    recommended_items = np.argsort(recommendations)[::-1][:top_n]
+    return recommended_items + 1  # Adjusting index to match item IDs
+
+# Example recommendation for user 1
+recommended_items = recommend_items(1, user_item_matrix, user_similarity_df, top_n=3)
+print(f"Recommended items for user 1: {recommended_items}")
